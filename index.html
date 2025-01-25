@@ -1,7 +1,195 @@
 <!DOCTYPE html>
+<html lang="ca">
 <head>
-    <title>Web Esborriacs</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEOCACHING ESBORRIACS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background-color: #fff;
+            color: black;
+        }
+        header {
+            background-color: #f2c94c;
+            color: black;
+            padding: 1em;
+        }
+        section {
+            padding: 20px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #f2c94c;
+            color: black;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e0b246;
+        }
+        .hidden {
+            display: none;
+        }
+        #missatge-error {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>hello world!</h1>
+    <header>
+        <h1>GEOCACHING ESBORRIACS</h1>
+    </header>
+
+    <main>
+        <!-- Normes inicials -->
+        <section id="normes">
+            <h2>Normes del joc:</h2>
+            <ul style="text-align: left; display: inline-block;">
+                <li> Feu les proves en ordre.</li>
+                <li> Només podeu demanar ajuda una vegada.</li>
+                <li> Heu de fer-vos una foto a cada plaça i enviar-la al grup, per rebre la prova</li>
+                <li> El primer en acabar tindrà una sorpresa final!</li>
+            </ul>
+            <button id="començar">Començar</button>
+        </section>
+
+        <!-- Selecció de grup -->
+        <section id="seleccio-grup" class="hidden">
+            <h2>Selecciona el teu grup:</h2>
+            <select id="grup">
+                <option value="grup1">Grup 1</option>
+                <option value="grup2">Grup 2</option>
+                <option value="grup3">Grup 3</option>
+                <option value="grup4">Grup 4</option>
+            </select>
+            <button id="iniciar-grup">Iniciar</button>
+        </section>
+
+        <!-- Prova -->
+        <section id="prova" class="hidden">
+            <h2 id="titol-prova" style="background-color: #f2c94c; color: black; padding: 10px;"></h2>
+            <p id="objectiu-prova"></p>
+            <p id="subplaces" class="hidden" style="font-weight: bold; color: #333;"></p>
+            <input type="password" id="contrasenya" placeholder="Contrasenya">
+            <label>
+                <input type="checkbox" id="toggle-password"> Mostra contrasenya
+            </label>
+            <button id="validar">Validar</button>
+            <p id="missatge-error" class="hidden">Contrasenya incorrecta. Torna a provar!</p>
+        </section>
+
+        <!-- Pista -->
+        <section id="pista" class="hidden">
+            <h2>Pista:</h2>
+            <p id="text-pista"></p>
+            <button id="seguent-prova">Següent prova</button>
+        </section>
+    </main>
+
+    <script>
+        const proves = [
+            { titol: "Prova 1", objectiu: "Reconstruiu una frase o missatge relacionat amb l’esplai.", contrasenya: "ESBORRIACS", 
+              pistes: {
+                  grup1: "Segueix on les teixidores van donar vida als fils d’història.",
+                  grup2: "Sóc una figura senzilla, amb dues línies que es creuen, al món porto molts significats, Qui sóc?",
+                  grup3: "La següent pista es troba als primers locals de Trepa",
+                  grup4: "Plaça del Gas"
+              }
+            },
+            { titol: "Prova 2", objectiu: "Desxifreu la direcció i nombre de passos per trobar la següent ubicació.", contrasenya: "8", pista: "Sóc una figura senzilla, amb dues línies que es creuen, al món porto molts significats, Qui sóc?" },
+            { titol: "Prova 3", objectiu: "Prova col·laborativa de coneixements de Trepa.", contrasenya: "1978/4/Clar del Bosc", pista: "La següent pista es troba als primers locals de Trepa." },
+            { titol: "Prova 4", objectiu: "Desxifreu el codi per trobar la pista següent.", contrasenya: "Plaça del Gas", pista: "Aneu a la Plaça del Gas." },
+            { titol: "Prova 5", objectiu: "Jeroglífic sobre l’esplai.", contrasenya: "gegants", pista: "Segueix els passos dels gegants a la festa major i descobreix el proper repte." },
+            { titol: "Prova 6", objectiu: "Trobar una paraula clau per a la contrasenya.", contrasenya: "valors", pista: "Trobeu els dos arbres germans." },
+            { titol: "Prova 7", objectiu: "Busqueu i identifiqueu l’objecte físicament a la plaça.", contrasenya: "pi", pista: "Segueix on les teixidores van donar vida als fils d’història." },
+            { titol: "Plaça de les Dones Teixidores (Separats)", subplaces: "Plaça Taulí i Lluís Subirana" },
+            { titol: "Carrer Alemanya (Separats)", subplaces: "Plaça Clara Campoamor i Club Natació" },
+            { titol: "Ajuntament (Separats)", subplaces: "Plaça Pedregar i Plaça Vallès" }
+        ];
+
+        const ordreGrups = {
+            grup1: [0, 1, 2, 3, 4, 5, 6],
+            grup2: [0, 2, 3, 4, 5, 6, 1],
+            grup3: [0, 3, 4, 5, 6, 1, 2],
+            grup4: [0, 4, 5, 6, 1, 2, 3]
+        };
+
+        let grupActual = null;
+        let indexProva = 0;
+
+        document.getElementById("començar").addEventListener("click", () => {
+            document.getElementById("normes").classList.add("hidden");
+            document.getElementById("seleccio-grup").classList.remove("hidden");
+        });
+
+        document.getElementById("iniciar-grup").addEventListener("click", () => {
+            grupActual = document.getElementById("grup").value;
+            document.getElementById("seleccio-grup").classList.add("hidden");
+            mostrarProva();
+        });
+
+        document.getElementById("validar").addEventListener("click", () => {
+            const inputContrasenya = document.getElementById("contrasenya").value;
+            const prova = proves[ordreGrups[grupActual][indexProva]];
+
+            if (inputContrasenya === prova.contrasenya) {
+                document.getElementById("prova").classList.add("hidden");
+                document.getElementById("pista").classList.remove("hidden");
+                document.getElementById("text-pista").textContent = prova.pistes?.[grupActual] || prova.pista;
+
+                if (indexProva === ordreGrups[grupActual].length - 1) {
+                    document.getElementById("text-pista").textContent = "Has completat totes les proves! Vés cap als locals de Trepa!";
+                }
+            } else {
+                const errorMessage = document.getElementById("missatge-error");
+                errorMessage.classList.remove("hidden");
+                setTimeout(() => errorMessage.classList.add("hidden"), 2000);
+            }
+        });
+
+        document.getElementById("seguent-prova").addEventListener("click", () => {
+            indexProva++;
+            if (indexProva < ordreGrups[grupActual].length) {
+                mostrarProva();
+            } else {
+                alert("Has completat totes les proves! Vés cap als locals de Trepa!");
+                location.reload();
+            }
+        });
+
+        document.getElementById("toggle-password").addEventListener("change", () => {
+            const passwordField = document.getElementById("contrasenya");
+            passwordField.type = passwordField.type === "password" ? "text" : "password";
+        });
+
+        function mostrarProva() {
+            const prova = proves[ordreGrups[grupActual][indexProva]];
+            document.getElementById("pista").classList.add("hidden");
+            document.getElementById("prova").classList.remove("hidden");
+            document.getElementById("titol-prova").textContent = prova.titol;
+            document.getElementById("objectiu-prova").textContent = prova.objectiu;
+
+            const subplaces = prova.subplaces || "";
+            const subplacesElement = document.getElementById("subplaces");
+
+            if (subplaces) {
+                subplacesElement.textContent = `Subplaces: ${subplaces}`;
+                subplacesElement.classList.remove("hidden");
+            } else {
+                subplacesElement.classList.add("hidden");
+            }
+
+            document.getElementById("contrasenya").value = "";
+            document.getElementById("missatge-error").classList.add("hidden");
+        }
+    </script>
 </body>
+</html>
+
